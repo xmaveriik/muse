@@ -1,11 +1,11 @@
 import {
-  ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ComponentType,
 } from 'discord.js';
 import type {
-  APIActionRowComponent,
-  APIMessageActionRowComponent,
+  ActionRowData,
+  MessageActionRowComponentBuilder,
 } from 'discord.js';
 
 export const PLAYER_BUTTON_IDS = {
@@ -28,14 +28,15 @@ interface PlayerControlsState {
 
 export function buildPlayerControls(
   player: PlayerControlsState,
-): APIActionRowComponent<APIMessageActionRowComponent> {
+): ActionRowData<MessageActionRowComponentBuilder> {
   const isPlaying = player.status === STATUS_PLAYING;
   const hasNext = player.getQueue().length > 0;
   const hasRepeat = player.loopCurrentSong || player.loopCurrentQueue;
   const repeatEmoji = player.loopCurrentSong ? '🔂' : '🔁';
 
-  return new ActionRowBuilder<ButtonBuilder>()
-    .addComponents(
+  return {
+    type: ComponentType.ActionRow,
+    components: [
       new ButtonBuilder()
         .setCustomId(PLAYER_BUTTON_IDS.PlayPause)
         .setEmoji(isPlaying ? '⏸️' : '▶️')
@@ -56,6 +57,6 @@ export function buildPlayerControls(
         .setCustomId(PLAYER_BUTTON_IDS.Repeat)
         .setEmoji(repeatEmoji)
         .setStyle(hasRepeat ? ButtonStyle.Success : ButtonStyle.Secondary),
-    )
-    .toJSON();
+    ],
+  };
 }
