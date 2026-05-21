@@ -670,7 +670,7 @@ export default class {
       if (autoAnnounceNextSong && this.currentChannel) {
         await this.currentChannel.send({
           embeds: this.getCurrent() ? [buildPlayingMessageEmbed(this)] : [],
-          components: this.getCurrent() ? [buildPlayerControls(this)] : [],
+          components: this.getCurrent() ? buildPlayerControls(this) : [],
         });
       }
     }
