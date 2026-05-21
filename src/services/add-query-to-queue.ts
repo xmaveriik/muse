@@ -97,7 +97,7 @@ export default class AddQueryToQueue {
 
       await interaction.editReply({
         embeds: [buildPlayingMessageEmbed(player)],
-        components: [buildPlayerControls(player)],
+        components: buildPlayerControls(player),
       });
     } else if (player.status === STATUS.IDLE) {
       // Player is idle, start playback instead
