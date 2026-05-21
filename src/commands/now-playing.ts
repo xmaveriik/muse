@@ -31,7 +31,7 @@ export default class implements Command {
 
     await interaction.reply({
       embeds: [buildPlayingMessageEmbed(player)],
-      components: [buildPlayerControls(player)],
+      components: buildPlayerControls(player),
     });
   }
 
@@ -115,7 +115,7 @@ export default class implements Command {
         if (player.getCurrent()) {
           await interaction.message.edit({
             embeds: [buildPlayingMessageEmbed(player)],
-            components: [buildPlayerControls(player)],
+            components: buildPlayerControls(player),
           });
         } else {
           await interaction.message.edit({
