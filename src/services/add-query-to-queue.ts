@@ -12,6 +12,7 @@ import {SponsorBlock} from 'sponsorblock-api';
 import Config from './config.js';
 import KeyValueCacheProvider from './key-value-cache.js';
 import {ONE_HOUR_IN_SECONDS} from '../utils/constants.js';
+import {buildPlayerControls} from '../utils/build-player-controls.js';
 
 @injectable()
 export default class AddQueryToQueue {
@@ -96,6 +97,7 @@ export default class AddQueryToQueue {
 
       await interaction.editReply({
         embeds: [buildPlayingMessageEmbed(player)],
+        components: [buildPlayerControls(player)],
       });
     } else if (player.status === STATUS.IDLE) {
       // Player is idle, start playback instead
