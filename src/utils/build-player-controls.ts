@@ -1,12 +1,5 @@
-import {
-  ButtonBuilder,
-  ButtonStyle,
-  ComponentType,
-} from 'discord.js';
-import type {
-  ActionRowData,
-  MessageActionRowComponentBuilder,
-} from 'discord.js';
+import {ButtonStyle, ComponentType} from 'discord.js';
+import type {ActionRowData, MessageActionRowComponentData} from 'discord.js';
 
 export const PLAYER_BUTTON_IDS = {
   PlayPause: 'player:playpause',
@@ -28,7 +21,7 @@ interface PlayerControlsState {
 
 export function buildPlayerControls(
   player: PlayerControlsState,
-): ActionRowData<MessageActionRowComponentBuilder> {
+): ActionRowData<MessageActionRowComponentData> {
   const isPlaying = player.status === STATUS_PLAYING;
   const hasNext = player.getQueue().length > 0;
   const hasRepeat = player.loopCurrentSong || player.loopCurrentQueue;
@@ -37,26 +30,31 @@ export function buildPlayerControls(
   return {
     type: ComponentType.ActionRow,
     components: [
-      new ButtonBuilder()
-        .setCustomId(PLAYER_BUTTON_IDS.PlayPause)
-        .setEmoji(isPlaying ? '⏸️' : '▶️')
-        .setStyle(ButtonStyle.Secondary),
-
-      new ButtonBuilder()
-        .setCustomId(PLAYER_BUTTON_IDS.Stop)
-        .setEmoji('⏹️')
-        .setStyle(ButtonStyle.Secondary),
-
-      new ButtonBuilder()
-        .setCustomId(PLAYER_BUTTON_IDS.Next)
-        .setEmoji('⏭️')
-        .setStyle(ButtonStyle.Secondary)
-        .setDisabled(!hasNext),
-
-      new ButtonBuilder()
-        .setCustomId(PLAYER_BUTTON_IDS.Repeat)
-        .setEmoji(repeatEmoji)
-        .setStyle(hasRepeat ? ButtonStyle.Success : ButtonStyle.Secondary),
+      {
+        type: ComponentType.Button,
+        customId: PLAYER_BUTTON_IDS.PlayPause,
+        emoji: {name: isPlaying ? '⏸️' : '▶️'},
+        style:ButtonStyle.Secondary,
+      },
+      {
+        type: ComponentType.Button,
+        customId: PLAYER_BUTTON_IDS.Stop,
+        emoji: {name: '⏹️'},
+        style: ButtonStyle.Secondary,
+      },
+      {
+        type: ComponentType.Button,
+        customId: PLAYER_BUTTON_IDS.Next,
+        emoji: {name: '⏭️'},
+        style: ButtonStyle.Secondary,
+        disabled: !hasNext,
+      },
+      {
+        type: ComponentType.Button,
+        customId: PLAYER_BUTTON_IDS.Repeat,
+        emoji: {name: repeatEmoji},
+        style: hasRepeat ? ButtonStyle.Success : ButtonStyle.Secondary,
+      },
     ],
   };
 }
