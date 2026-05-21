@@ -104,6 +104,54 @@ export default class implements Command {
         break;
       }
 
+      case PLAYER_BUTTON_IDS.SeekBack: {
+        const current = player.getCurrent();
+
+        if (!current || current.isLive) {
+          await interaction.editReply('Cannot seek this track.');
+          break;
+        }
+
+        const target = Math.max(0, player.getPosition() - 10);
+        await player.seek(target);
+        await interaction.editReply('⏪ Rewound 10 seconds.');
+        break;
+      }
+
+      case PLAYER_BUTTON_IDS.SeekForward: {
+        const current = player.getCurrent();
+
+        if (!current || current.isLive) {
+          await interaction.editReply('Cannot seek this track.');
+          break;
+        }
+
+        const target = Math.min(current.length - 1, player.getPosition() + 10);
+        await player.seek(target);
+        await interaction.editReply('⏩ Skipped forward 10 seconds.');
+        break;
+      }
+
+      case PLAYER_BUTTON_IDS.VolumeDown: {
+        const nextVolume = Math.max(0, player.getVolume() - 10);
+        player.setVolume(nextVolume);
+        await interaction.editReply(`🔉 Volume: ${nextVolume}%`);
+        break;
+      }
+
+      case PLAYER_BUTTON_IDS.VolumeUp: {
+        const nextVolume = Math.min(100, player.getVolume() + 10);
+        player.setVolume(nextVolume);
+        await interaction.editReply(`🔊 Volume: ${nextVolume}%`);
+        break;
+      }
+
+      case PLAYER_BUTTON_IDS.Mute: {
+        player.setVolume(0);
+        await interaction.editReply('🔇 Muted.');
+        break;
+      }
+
       default: {
         await interaction.editReply('Unknown control.');
         break;
