@@ -131,8 +131,17 @@ export const buildSessionMessages = (session: ListeningSessionRecord, player?: P
       button(session, 'next', 'Next', {disabled: !player.canGoForward(1)}),
     ));
     components.push(row(
+      button(session, 'stop', '⏹ Stop', {style: ButtonStyle.Danger}),
+      button(session, 'repeat', player.loopCurrentSong ? '🔂 Song' : player.loopCurrentQueue ? '🔁 Queue' : '🔁 Off',
+        {style: player.loopCurrentSong || player.loopCurrentQueue ? ButtonStyle.Success : ButtonStyle.Secondary}),
       button(session, 'queue', 'Queue'),
       button(session, 'shuffle', 'Shuffle', {disabled: player.isQueueEmpty()}),
+    ));
+    const volume = player.getVolume();
+    components.push(row(
+      button(session, 'volumeDown', '🔉 −10%', {disabled: volume <= 0}),
+      button(session, 'volumeUp', '🔊 +10%', {disabled: volume >= 100}),
+      button(session, 'mute', '🔇 Mute', {disabled: volume <= 0}),
     ));
   }
 
