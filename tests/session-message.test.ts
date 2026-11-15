@@ -169,7 +169,8 @@ describe('classic live player', () => {
     ]);
     expect(messages[0].components.map(row => row.components.map(button => button.label))).toEqual([
       ['Previous', '−10s', status === STATUS.PAUSED ? 'Resume' : 'Pause', '+10s', 'Next'],
-      ['Queue', 'Shuffle'],
+      ['⏹ Stop', '🔁 Off', 'Queue', 'Shuffle'],
+      ['🔉 −10%', '🔊 +10%', '🔇 Mute'],
     ]);
     expectBoundedMessages(messages);
   });
@@ -194,18 +195,40 @@ describe('classic live player', () => {
     const controls = payload.components.flatMap(row => row.components);
     const control = (action: string) => controls.find(button => button.custom_id.includes(`:${action}:`))!;
 
-    expect(payload.components.map(row => row.components.length)).toEqual([5, 2]);
+    expect(payload.components.map(row => row.components.length)).toEqual([5, 4, 3]);
     expect(control('previous').disabled).toBe(true);
     expect(control('next').disabled).toBe(true);
     expect(control('backward').disabled).toBe(isLive);
     expect(control('forward').disabled).toBe(isLive);
     expect(control('shuffle').disabled).toBe(true);
-    expect(control('stop')).toBeUndefined();
+    expect(control('stop').style).toBe(ButtonStyle.Danger);
+    expect(control('repeat').label).toBe('🔁 Off');
+    expect(control('volumeDown').disabled).toBe(false);
+    expect(control('volumeUp').disabled).toBe(true);
+    expect(control('mute').disabled).toBe(false);
     expect(controls.filter(button => button.style === ButtonStyle.Primary).map(button => button.label)).toEqual(['Pause']);
     expect(controls.some(button => button.label === 'More')).toBe(false);
 
     const withQueue = buildSessionMessage(session, makePlayer([track, track]));
     expect(withQueue.components[1].components.find(button => button.label === 'Shuffle')?.disabled).toBe(false);
+  });
+
+  it('reflects repeat and muted-volume states in the added controls', () => {
+    const song = makeTrack('https://music.example/current');
+    const session = makeSession([song]);
+    const render = (flags: object) => buildSessionMessage(session, makePlayer([song], {getVolume: () => 0, ...flags}))
+      .components.flatMap(row => row.components);
+    const get = (items: ReturnType<typeof render>, action: string) => items.find(item => item.custom_id.includes(`:${action}:`))!;
+
+    const songLoop = render({loopCurrentSong: true});
+    expect(get(songLoop, 'repeat').label).toBe('🔂 Song');
+    expect(get(songLoop, 'repeat').style).toBe(ButtonStyle.Success);
+    const queueLoop = render({loopCurrentQueue: true});
+    expect(get(queueLoop, 'repeat').label).toBe('🔁 Queue');
+    expect(get(queueLoop, 'repeat').style).toBe(ButtonStyle.Success);
+    expect(get(queueLoop, 'volumeDown').disabled).toBe(true);
+    expect(get(queueLoop, 'mute').disabled).toBe(true);
+    expect(get(queueLoop, 'volumeUp').disabled).toBe(false);
   });
 
   it('removes empty queue metadata when the last upcoming song starts, without changing the full queue view', () => {
