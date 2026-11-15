@@ -300,7 +300,7 @@ describe('moving the player onto public queue receipts', () => {
     expect(f.player.setPlayingMessageUpdater).toHaveBeenLastCalledWith(expect.any(Function), next.id, {keepAfterFinish: true, retryOnError: true});
     await f.state.updater!();
     expect(next.edit.mock.calls.every(([payload]) => payload.content === undefined)).toBe(true);
-    expect(next.edit.mock.calls.at(-1)![0].components).toHaveLength(2);
+    expect(next.edit.mock.calls.at(-1)![0].components).toHaveLength(3);
     f.state.record.endedAt = new Date();
     f.state.record.entries[0].status = 'stopped';
     await f.state.updater!();
@@ -429,7 +429,7 @@ describe('moving the player onto public queue receipts', () => {
     const next = receipt(f);
     await expect(f.service.attachToReply(f.player as never, f.channel as never, Promise.resolve(next as never))).rejects.toThrow('SQLite unavailable');
     expect(f.state.record.messageId).toBe('100');
-    expect(f.card.edit.mock.calls.at(-1)![0].components).toHaveLength(2);
+    expect(f.card.edit.mock.calls.at(-1)![0].components).toHaveLength(3);
     expect(next.edit).toHaveBeenLastCalledWith(expect.objectContaining({embeds: [], components: []}));
     expect(f.card.delete).not.toHaveBeenCalled();
     expect(next.delete).not.toHaveBeenCalled();
