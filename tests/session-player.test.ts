@@ -51,7 +51,8 @@ const fixture = () => {
     voiceConnection: {joinConfig: {channelId: 'voice'}},
     getCurrent: vi.fn(() => track()), getQueue: vi.fn(() => [track('Next song')]), getPosition: () => 30,
     queueSize: vi.fn(() => 1),
-    getVolume: () => 100, canGoBack: () => false, canGoForward: () => true, isQueueEmpty: () => false,
+    getVolume: vi.fn(() => 100), setVolume: vi.fn(), canGoBack: () => false, canGoForward: () => true, isQueueEmpty: () => false,
+    loopCurrentSong: false, loopCurrentQueue: false,
     back: vi.fn(), forward: vi.fn(), pause: vi.fn(), play: vi.fn(), stop: vi.fn(), shuffle: vi.fn(), seek: vi.fn(),
     refreshPlayingMessage: vi.fn(),
     setPlayingMessageUpdater: vi.fn((updater: () => Promise<void>) => { state.updater = updater; }),
@@ -299,7 +300,7 @@ describe('moving the player onto public queue receipts', () => {
     expect(f.player.setPlayingMessageUpdater).toHaveBeenLastCalledWith(expect.any(Function), next.id, {keepAfterFinish: true, retryOnError: true});
     await f.state.updater!();
     expect(next.edit.mock.calls.every(([payload]) => payload.content === undefined)).toBe(true);
-    expect(next.edit.mock.calls.at(-1)![0].components).toHaveLength(2);
+    expect(next.edit.mock.calls.at(-1)![0].components).toHaveLength(3);
     f.state.record.endedAt = new Date();
     f.state.record.entries[0].status = 'stopped';
     await f.state.updater!();
@@ -428,7 +429,7 @@ describe('moving the player onto public queue receipts', () => {
     const next = receipt(f);
     await expect(f.service.attachToReply(f.player as never, f.channel as never, Promise.resolve(next as never))).rejects.toThrow('SQLite unavailable');
     expect(f.state.record.messageId).toBe('100');
-    expect(f.card.edit.mock.calls.at(-1)![0].components).toHaveLength(2);
+    expect(f.card.edit.mock.calls.at(-1)![0].components).toHaveLength(3);
     expect(next.edit).toHaveBeenLastCalledWith(expect.objectContaining({embeds: [], components: []}));
     expect(f.card.delete).not.toHaveBeenCalled();
     expect(next.delete).not.toHaveBeenCalled();
@@ -678,7 +679,7 @@ describe('session buttons and durable history', () => {
     expect(f.player.seek).toHaveBeenCalledWith(180, {preservePausedState: true});
   });
 
-  it.each(['previous', 'backward', 'pause', 'resume', 'forward', 'next', 'shuffle', 'stop'])('dismisses the private acknowledgement after successful %s without a status reply', async action => {
+  it.each(['previous', 'backward', 'pause', 'resume', 'forward', 'next', 'shuffle', 'stop', 'repeat', 'volumeDown', 'volumeUp', 'mute'])('dismisses the private acknowledgement after successful %s without a status reply', async action => {
     const f = fixture();
     Object.assign(f.state.record, {channelId: 'channel', messageId: 'message'});
     f.player.canGoBack = () => true;
@@ -688,6 +689,52 @@ describe('session buttons and durable history', () => {
     expect(interaction.deleteReply).toHaveBeenCalledOnce();
     expect(interaction.editReply).not.toHaveBeenCalled();
     expect(f.player.refreshPlayingMessage).toHaveBeenCalledOnce();
+  });
+
+  it('cycles repeat off → song → queue → off with mode-aware command permissions', async () => {
+    const f = fixture();
+    Object.assign(f.state.record, {channelId: 'channel', messageId: 'message'});
+
+    await f.service.handleButton(f.interaction('repeat') as never);
+    expect(f.player.loopCurrentSong).toBe(true);
+    expect(f.player.loopCurrentQueue).toBe(false);
+    expect(permission).toHaveBeenLastCalledWith(f.card, 'listener', 'loop');
+
+    await f.service.handleButton(f.interaction('repeat') as never);
+    expect(f.player.loopCurrentSong).toBe(false);
+    expect(f.player.loopCurrentQueue).toBe(true);
+    expect(permission).toHaveBeenLastCalledWith(f.card, 'listener', 'loop-queue');
+
+    await f.service.handleButton(f.interaction('repeat') as never);
+    expect(f.player.loopCurrentSong).toBe(false);
+    expect(f.player.loopCurrentQueue).toBe(false);
+    expect(permission).toHaveBeenLastCalledWith(f.card, 'listener', 'loop-queue');
+  });
+
+  it('only enables queue repeat when a following song exists', async () => {
+    const f = fixture();
+    Object.assign(f.state.record, {channelId: 'channel', messageId: 'message'});
+    f.player.queueSize.mockReturnValue(0);
+    f.player.loopCurrentSong = true;
+    await f.service.handleButton(f.interaction('repeat') as never);
+    expect(f.player.loopCurrentSong).toBe(false);
+    expect(f.player.loopCurrentQueue).toBe(false);
+    expect(permission).toHaveBeenLastCalledWith(f.card, 'listener', 'loop');
+  });
+
+  it.each([
+    ['volumeDown', 5, 0],
+    ['volumeDown', 65, 55],
+    ['volumeUp', 95, 100],
+    ['volumeUp', 25, 35],
+    ['mute', 70, 0],
+  ] as const)('applies %s at volume %d and clamps to %d', async (action, volume, expected) => {
+    const f = fixture();
+    Object.assign(f.state.record, {channelId: 'channel', messageId: 'message'});
+    f.player.getVolume.mockReturnValue(volume);
+    await f.service.handleButton(f.interaction(action) as never);
+    expect(permission).toHaveBeenLastCalledWith(f.card, 'listener', 'volume');
+    expect(f.player.setVolume).toHaveBeenCalledWith(expected);
   });
 
   it('leaves the private acknowledgement available for the error handler when an action fails', async () => {
