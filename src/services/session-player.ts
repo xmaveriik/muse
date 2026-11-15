@@ -15,6 +15,7 @@ import {buildHistoryMessages, buildMoreMessage, buildQueueMessage, buildSessionM
 const isMissingMessage = (error: unknown): boolean => Boolean(error && typeof error === 'object' && 'code' in error && error.code === 10008);
 const playbackCommands: Record<string, string> = {
   previous: 'unskip', next: 'next', pause: 'pause', resume: 'resume', backward: 'seek', forward: 'fseek', shuffle: 'shuffle', stop: 'stop',
+  repeat: 'loop', volumeDown: 'volume', volumeUp: 'volume', mute: 'volume',
 };
 
 @injectable()
@@ -360,7 +361,9 @@ export default class SessionPlayer {
       && active.listeningSession?.snapshot()?.messageId === messageId
       && guild.members.cache.get(interaction.user.id)?.voice.channelId === active.voiceConnection?.joinConfig.channelId
       && Boolean(active.voiceConnection?.joinConfig.channelId);
-    const command = playbackCommands[action];
+    // Cycling from song repeat to queue repeat requires permission for /loop-queue.
+    const command = action === 'repeat' && (active.loopCurrentQueue || (active.loopCurrentSong && active.queueSize() > 0))
+      ? 'loop-queue' : playbackCommands[action];
     if (!canControl() || !await canUsePlaybackCommand(card, interaction.user.id, command) || !canControl()) {
       await interaction.editReply('Join the bot\'s voice channel and check your permission to use this command.');
       return;
@@ -555,6 +558,22 @@ export default class SessionPlayer {
       player.stop();
     } else if (action === 'shuffle') {
       player.shuffle();
+    } else if (action === 'repeat') {
+      // Cycle: off -> repeat song -> repeat queue -> off.
+      if (player.loopCurrentSong) {
+        player.loopCurrentSong = false;
+        player.loopCurrentQueue = player.queueSize() > 0;
+      } else if (player.loopCurrentQueue) {
+        player.loopCurrentQueue = false;
+      } else {
+        player.loopCurrentSong = true;
+      }
+    } else if (action === 'volumeDown') {
+      player.setVolume(Math.max(0, player.getVolume() - 10));
+    } else if (action === 'volumeUp') {
+      player.setVolume(Math.min(100, player.getVolume() + 10));
+    } else if (action === 'mute') {
+      player.setVolume(0);
     } else if (action === 'backward' || action === 'forward') {
       const track = player.getCurrent();
       if (track && !track.isLive) {
